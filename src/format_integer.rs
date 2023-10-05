@@ -75,4 +75,9 @@ mod tests {
     fn test_format_integer_with_thousands_separator() {
         assert_eq!(format_integer(1234.into(), "0,000"), "1,234");
     }
+
+    // #[test]
+    // fn test_format_integer_with_thousands_separator2() {
+    //     assert_eq!(format_integer(4321.into(), "0,000"), "4,321");
+    // }
 }
