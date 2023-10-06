@@ -29,9 +29,24 @@ fn parse_decimal_digit_pattern(pattern: &str) -> Result<Vec<Sign>, Error> {
         .collect()
 }
 
+fn validate_decimal_digit_pattern(pattern: Vec<Sign>) -> Result<(), Error> {
+    let mut signs = pattern.iter().peekable();
+    while let Some(sign) = signs.next() {
+        if matches!(sign, Sign::GroupSeparator) {
+            if let Some(next_sign) = signs.peek() {
+                if matches!(next_sign, Sign::GroupSeparator) {
+                    return Err(Error::IllegalPrimaryToken);
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 impl Picture {
     fn parse(picture: &str) -> Result<Self, Error> {
-        parse_decimal_digit_pattern(picture)?;
+        let pattern = parse_decimal_digit_pattern(picture)?;
+        validate_decimal_digit_pattern(pattern)?;
 
         let splitted = picture.split_once(',');
         if let Some((digits, _thousands_digits)) = splitted {
@@ -137,6 +152,14 @@ mod tests {
     fn test_illegal_primary_token() {
         assert_eq!(
             format_integer(123.into(), "0b0"),
+            Err(Error::IllegalPrimaryToken)
+        );
+    }
+
+    #[test]
+    fn test_illegal_primary_token_with_adjacent_grouping_separators() {
+        assert_eq!(
+            format_integer(234.into(), "0,,0"),
             Err(Error::IllegalPrimaryToken)
         );
     }
