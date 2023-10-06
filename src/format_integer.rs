@@ -31,13 +31,16 @@ fn parse_decimal_digit_pattern(pattern: &str) -> Result<Vec<Sign>, Error> {
 
 fn validate_decimal_digit_pattern(pattern: Vec<Sign>) -> Result<(), Error> {
     let mut signs = pattern.iter().peekable();
+
+    if matches!(signs.peek(), Some(Sign::GroupSeparator)) {
+        return Err(Error::IllegalPrimaryToken);
+    }
+
     while let Some(sign) = signs.next() {
-        if matches!(sign, Sign::GroupSeparator) {
-            if let Some(next_sign) = signs.peek() {
-                if matches!(next_sign, Sign::GroupSeparator) {
-                    return Err(Error::IllegalPrimaryToken);
-                }
-            }
+        if matches!(sign, Sign::GroupSeparator)
+            && matches!(signs.peek(), Some(Sign::GroupSeparator))
+        {
+            return Err(Error::IllegalPrimaryToken);
         }
     }
     Ok(())
@@ -157,10 +160,26 @@ mod tests {
     }
 
     #[test]
-    fn test_illegal_primary_token_with_adjacent_grouping_separators() {
+    fn test_illegal_decimal_digit_pattern_with_adjacent_grouping_separators() {
         assert_eq!(
             format_integer(234.into(), "0,,0"),
             Err(Error::IllegalPrimaryToken)
         );
     }
+
+    #[test]
+    fn test_illegal_decimal_digit_pattern_with_starting_grouping_separator() {
+        assert_eq!(
+            format_integer(234.into(), ",0"),
+            Err(Error::IllegalPrimaryToken)
+        );
+    }
+
+    // #[test]
+    // fn test_illegal_decimal_digit_pattern_with_ending_grouping_separator() {
+    //     assert_eq!(
+    //         format_integer(345.into(), "0,"),
+    //         Err(Error::IllegalPrimaryToken)
+    //     );
+    // }
 }
