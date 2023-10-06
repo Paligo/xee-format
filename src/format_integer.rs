@@ -1,26 +1,51 @@
 use ibig::IBig;
 use num_traits::Signed;
 
+#[derive(Debug, PartialEq)]
+pub enum Error {
+    IllegalPrimaryToken,
+}
+
 struct Picture {
     width: usize,
     thousands_separator: Option<char>,
 }
 
+enum Sign {
+    OptionalDigit,
+    MandatoryDigit,
+    GroupSeparator,
+}
+
+fn parse_decimal_digit_pattern(pattern: &str) -> Result<Vec<Sign>, Error> {
+    pattern
+        .chars()
+        .map(|c| match c {
+            '#' => Ok(Sign::OptionalDigit),
+            '0'..='9' => Ok(Sign::MandatoryDigit),
+            ',' => Ok(Sign::GroupSeparator),
+            _ => Err(Error::IllegalPrimaryToken),
+        })
+        .collect()
+}
+
 impl Picture {
-    fn parse(picture: &str) -> Self {
+    fn parse(picture: &str) -> Result<Self, Error> {
+        parse_decimal_digit_pattern(picture)?;
+
         let splitted = picture.split_once(',');
         if let Some((digits, _thousands_digits)) = splitted {
             let width = digits.len();
-            Self {
+            Ok(Self {
                 width,
                 thousands_separator: Some(','),
-            }
+            })
         } else {
             let width = picture.len();
-            Self {
+            Ok(Self {
                 width,
                 thousands_separator: None,
-            }
+            })
         }
     }
 
@@ -30,20 +55,31 @@ impl Picture {
         } else {
             self.width
         };
+
         if let Some(_thousands_separator) = self.thousands_separator {
-            // let thousands: IBig = i.clone() / 1000;
-            // let rest: IBig = i.clone() % (ibig!(1000));
-            "1,234".to_string()
+            let s = i.to_string();
+            s.chars()
+                .rev()
+                .enumerate()
+                .fold(String::new(), |mut acc, (i, c)| {
+                    if i % 3 == 0 && i != 0 {
+                        acc.push(',')
+                    }
+                    acc.push(c);
+                    acc
+                })
+                .chars()
+                .rev()
+                .collect()
         } else {
             format!("{:0width$}", i, width = width)
         }
     }
 }
 
-pub fn format_integer(i: IBig, picture: &str) -> String {
-    let picture = Picture::parse(picture);
-    picture.format(i)
-    // let mut width = picture.len();
+pub fn format_integer(i: IBig, picture: &str) -> Result<String, Error> {
+    let picture = Picture::parse(picture)?;
+    Ok(picture.format(i))
 }
 
 #[cfg(test)]
@@ -53,31 +89,55 @@ mod tests {
 
     #[test]
     fn test_format_integer() {
-        assert_eq!(format_integer(123.into(), "1"), "123");
+        assert_eq!(format_integer(123.into(), "1").unwrap(), "123");
     }
 
     #[test]
     fn test_format_zero_padded_integer() {
-        assert_eq!(format_integer(123.into(), "0000"), "0123");
+        assert_eq!(format_integer(123.into(), "0000").unwrap(), "0123");
     }
 
     #[test]
     fn test_format_zero_padded_integer_negative() {
-        assert_eq!(format_integer((-123).into(), "00000"), "-00123");
+        assert_eq!(format_integer((-123).into(), "00000").unwrap(), "-00123");
     }
 
     #[test]
     fn test_format_zero_padded_integer_negative_shorter() {
-        assert_eq!(format_integer((-123).into(), "0000"), "-0123");
+        assert_eq!(format_integer((-123).into(), "0000").unwrap(), "-0123");
     }
 
     #[test]
-    fn test_format_integer_with_thousands_separator() {
-        assert_eq!(format_integer(1234.into(), "0,000"), "1,234");
+    fn test_format_with_thousands_separator() {
+        assert_eq!(format_integer(1234.into(), "0,000").unwrap(), "1,234");
     }
 
-    // #[test]
-    // fn test_format_integer_with_thousands_separator2() {
-    //     assert_eq!(format_integer(4321.into(), "0,000"), "4,321");
-    // }
+    #[test]
+    fn test_format_with_thousands_separator2() {
+        assert_eq!(format_integer(4321.into(), "0,000").unwrap(), "4,321");
+    }
+
+    #[test]
+    fn test_format_with_thousands_separator_large() {
+        assert_eq!(
+            format_integer(1_222_333.into(), "0,000").unwrap(),
+            "1,222,333"
+        );
+    }
+
+    #[test]
+    fn test_format_with_thousands_negative() {
+        assert_eq!(
+            format_integer((-1_222_333).into(), "0,000").unwrap(),
+            "-1,222,333"
+        );
+    }
+
+    #[test]
+    fn test_illegal_primary_token() {
+        assert_eq!(
+            format_integer(123.into(), "0b0"),
+            Err(Error::IllegalPrimaryToken)
+        );
+    }
 }
