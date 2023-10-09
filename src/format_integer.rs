@@ -15,7 +15,7 @@ struct Picture {
 enum Sign {
     OptionalDigit,
     MandatoryDigit,
-    GroupSeparator,
+    GroupSeparator(char),
 }
 
 fn parse_decimal_digit_pattern(pattern: &str) -> Result<Vec<Sign>, Error> {
@@ -24,16 +24,16 @@ fn parse_decimal_digit_pattern(pattern: &str) -> Result<Vec<Sign>, Error> {
         .map(|c| match c {
             '#' => Ok(Sign::OptionalDigit),
             '0'..='9' => Ok(Sign::MandatoryDigit),
-            ',' => Ok(Sign::GroupSeparator),
+            ',' | '.' => Ok(Sign::GroupSeparator(c)),
             _ => Err(Error::InvalidPictureString),
         })
         .collect()
 }
 
-fn validate_decimal_digit_pattern(pattern: Vec<Sign>) -> Result<(), Error> {
+fn validate_decimal_digit_pattern(pattern: &[Sign]) -> Result<(), Error> {
     let mut signs = pattern.iter().peekable();
 
-    if matches!(signs.peek(), Some(Sign::GroupSeparator)) {
+    if matches!(signs.peek(), Some(Sign::GroupSeparator(_))) {
         return Err(Error::InvalidPictureString);
     }
 
@@ -47,8 +47,8 @@ fn validate_decimal_digit_pattern(pattern: Vec<Sign>) -> Result<(), Error> {
                     return Err(Error::InvalidPictureString);
                 }
             }
-            Sign::GroupSeparator => {
-                if matches!(signs.peek(), Some(Sign::GroupSeparator) | None) {
+            Sign::GroupSeparator(_) => {
+                if matches!(signs.peek(), Some(Sign::GroupSeparator(_)) | None) {
                     return Err(Error::InvalidPictureString);
                 }
             }
@@ -61,17 +61,17 @@ fn validate_decimal_digit_pattern(pattern: Vec<Sign>) -> Result<(), Error> {
 impl Picture {
     fn parse(picture: &str) -> Result<Self, Error> {
         let pattern = parse_decimal_digit_pattern(picture)?;
-        validate_decimal_digit_pattern(pattern)?;
+        validate_decimal_digit_pattern(&pattern)?;
 
-        let splitted = picture.split_once(',');
-        if let Some((digits, _thousands_digits)) = splitted {
-            let width = digits.len();
+        let width = pattern.len();
+        let thousands_digits = pattern.iter().any(|c| matches!(c, Sign::GroupSeparator(_)));
+
+        if thousands_digits {
             Ok(Self {
                 width,
                 thousands_separator: Some(','),
             })
         } else {
-            let width = picture.len();
             Ok(Self {
                 width,
                 thousands_separator: None,
@@ -192,4 +192,12 @@ mod tests {
     fn test_optional_digit_by_itself_is_illegal() {
         assert_eq!(Picture::parse("#"), Err(Error::InvalidPictureString));
     }
+
+    // #[test]
+    // fn test_irregular_grouping_separator_with_mixed_separators() {
+    //     assert_eq!(
+    //         format_integer(1_222_333.into(), "1,222.000").unwrap(),
+    //         "1,222.333"
+    //     );
+    // }
 }
