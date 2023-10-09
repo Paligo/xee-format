@@ -3,9 +3,10 @@ use num_traits::Signed;
 
 #[derive(Debug, PartialEq)]
 pub enum Error {
-    IllegalPrimaryToken,
+    InvalidPictureString,
 }
 
+#[derive(Debug, PartialEq)]
 struct Picture {
     width: usize,
     thousands_separator: Option<char>,
@@ -24,7 +25,7 @@ fn parse_decimal_digit_pattern(pattern: &str) -> Result<Vec<Sign>, Error> {
             '#' => Ok(Sign::OptionalDigit),
             '0'..='9' => Ok(Sign::MandatoryDigit),
             ',' => Ok(Sign::GroupSeparator),
-            _ => Err(Error::IllegalPrimaryToken),
+            _ => Err(Error::InvalidPictureString),
         })
         .collect()
 }
@@ -33,14 +34,22 @@ fn validate_decimal_digit_pattern(pattern: Vec<Sign>) -> Result<(), Error> {
     let mut signs = pattern.iter().peekable();
 
     if matches!(signs.peek(), Some(Sign::GroupSeparator)) {
-        return Err(Error::IllegalPrimaryToken);
+        return Err(Error::InvalidPictureString);
     }
 
     while let Some(sign) = signs.next() {
+        if matches!(sign, Sign::OptionalDigit)
+            && (!matches!(
+                signs.peek(),
+                Some(Sign::OptionalDigit) | Some(Sign::MandatoryDigit)
+            ))
+        {
+            return Err(Error::InvalidPictureString);
+        }
         if matches!(sign, Sign::GroupSeparator)
             && (matches!(signs.peek(), Some(Sign::GroupSeparator)) || signs.peek().is_none())
         {
-            return Err(Error::IllegalPrimaryToken);
+            return Err(Error::InvalidPictureString);
         }
     }
     Ok(())
@@ -153,33 +162,31 @@ mod tests {
 
     #[test]
     fn test_illegal_primary_token() {
-        assert_eq!(
-            format_integer(123.into(), "0b0"),
-            Err(Error::IllegalPrimaryToken)
-        );
+        assert_eq!(Picture::parse("0b0"), Err(Error::InvalidPictureString));
     }
 
     #[test]
     fn test_illegal_decimal_digit_pattern_with_adjacent_grouping_separators() {
-        assert_eq!(
-            format_integer(234.into(), "0,,0"),
-            Err(Error::IllegalPrimaryToken)
-        );
+        assert_eq!(Picture::parse("0,,0"), Err(Error::InvalidPictureString));
     }
 
     #[test]
     fn test_illegal_decimal_digit_pattern_with_starting_grouping_separator() {
-        assert_eq!(
-            format_integer(234.into(), ",0"),
-            Err(Error::IllegalPrimaryToken)
-        );
+        assert_eq!(Picture::parse(",0"), Err(Error::InvalidPictureString));
     }
 
     #[test]
     fn test_illegal_decimal_digit_pattern_with_ending_grouping_separator() {
-        assert_eq!(
-            format_integer(345.into(), "0,"),
-            Err(Error::IllegalPrimaryToken)
-        );
+        assert_eq!(Picture::parse("0,"), Err(Error::InvalidPictureString));
+    }
+
+    #[test]
+    fn test_optional_digit_sign_before_mandatory_digit_sign() {
+        assert!(Picture::parse("#0").is_ok());
+    }
+
+    #[test]
+    fn test_optional_digit_by_itself_is_illegal() {
+        assert_eq!(Picture::parse("#"), Err(Error::InvalidPictureString));
     }
 }
