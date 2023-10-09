@@ -8,10 +8,42 @@ pub enum Error {
 
 #[derive(Debug, PartialEq)]
 struct Picture {
-    pattern: Vec<Sign>,
+    pattern: Pattern,
 }
 
 #[derive(Debug, PartialEq)]
+enum Pattern {
+    NonRegular(NonRegular),
+    Regular(Regular),
+}
+
+#[derive(Debug, PartialEq)]
+struct NonRegular(Vec<Sign>);
+#[derive(Debug, PartialEq)]
+struct Regular(char, usize);
+
+impl NonRegular {
+    fn signs(&self) -> impl Iterator<Item = &Sign> {
+        self.0.iter().rev()
+    }
+}
+
+impl Regular {
+    fn signs(&self) -> impl Iterator<Item = &Sign> {
+        std::iter::empty()
+    }
+}
+
+impl Pattern {
+    fn signs(&self) -> Box<dyn Iterator<Item = &Sign> + '_> {
+        match self {
+            Self::NonRegular(p) => Box::new(p.signs()),
+            Self::Regular(p) => Box::new(p.signs()),
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
 enum Sign {
     OptionalDigit,
     MandatoryDigit,
@@ -63,7 +95,9 @@ impl Picture {
         let pattern = parse_decimal_digit_pattern(picture)?;
         validate_decimal_digit_pattern(&pattern)?;
 
-        Ok(Self { pattern })
+        Ok(Self {
+            pattern: Pattern::NonRegular(NonRegular(pattern)),
+        })
     }
 
     fn format(&self, i: IBig) -> String {
@@ -74,9 +108,8 @@ impl Picture {
         let mut digits = s.chars().rev();
 
         // we have an iterator for the pattern
-        let signs = self.pattern.iter();
         let mut output = String::new();
-        for sign in signs.rev() {
+        for sign in self.pattern.signs() {
             match sign {
                 Sign::OptionalDigit => {
                     if let Some(digit) = digits.next() {
@@ -178,13 +211,13 @@ mod tests {
         assert_eq!(Picture::parse("#"), Err(Error::InvalidPictureString));
     }
 
-    // #[test]
-    // fn test_format_with_thousands_negative_regular() {
-    //     assert_eq!(
-    //         format_integer((-1_222_333).into(), "0,000").unwrap(),
-    //         "-1,222,333"
-    //     );
-    // }
+    #[test]
+    fn test_format_grouping_separator_with_irregular_separators() {
+        assert_eq!(
+            format_integer(1_222_333.into(), "1,222.000").unwrap(),
+            "1,222.333"
+        );
+    }
 
     // #[test]
     // fn test_format_with_thousands_separator_large_regular() {
@@ -194,13 +227,13 @@ mod tests {
     //     );
     // }
 
-    #[test]
-    fn test_format_grouping_separator_with_irregular_separators() {
-        assert_eq!(
-            format_integer(1_222_333.into(), "1,222.000").unwrap(),
-            "1,222.333"
-        );
-    }
+    // #[test]
+    // fn test_format_with_thousands_negative_regular() {
+    //     assert_eq!(
+    //         format_integer((-1_222_333).into(), "0,000").unwrap(),
+    //         "-1,222,333"
+    //     );
+    // }
 
     // TODO validate that mandatory digits cannot come before optional digits
 
