@@ -38,7 +38,7 @@ fn validate_decimal_digit_pattern(pattern: Vec<Sign>) -> Result<(), Error> {
 
     while let Some(sign) = signs.next() {
         if matches!(sign, Sign::GroupSeparator)
-            && matches!(signs.peek(), Some(Sign::GroupSeparator))
+            && (matches!(signs.peek(), Some(Sign::GroupSeparator)) || signs.peek().is_none())
         {
             return Err(Error::IllegalPrimaryToken);
         }
@@ -175,11 +175,11 @@ mod tests {
         );
     }
 
-    // #[test]
-    // fn test_illegal_decimal_digit_pattern_with_ending_grouping_separator() {
-    //     assert_eq!(
-    //         format_integer(345.into(), "0,"),
-    //         Err(Error::IllegalPrimaryToken)
-    //     );
-    // }
+    #[test]
+    fn test_illegal_decimal_digit_pattern_with_ending_grouping_separator() {
+        assert_eq!(
+            format_integer(345.into(), "0,"),
+            Err(Error::IllegalPrimaryToken)
+        );
+    }
 }
