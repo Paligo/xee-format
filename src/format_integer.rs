@@ -100,25 +100,6 @@ impl Picture {
             output.push('-')
         }
         output.chars().rev().collect()
-
-        // if thousands_separator {
-        //     let s = i.to_string();
-        //     s.chars()
-        //         .rev()
-        //         .enumerate()
-        //         .fold(String::new(), |mut acc, (i, c)| {
-        //             if i % 3 == 0 && i != 0 {
-        //                 acc.push(',')
-        //             }
-        //             acc.push(c);
-        //             acc
-        //         })
-        //         .chars()
-        //         .rev()
-        //         .collect()
-        // } else {
-        //     format!("{:0width$}", i, width = width)
-        // }
     }
 }
 
@@ -162,26 +143,10 @@ mod tests {
         assert_eq!(format_integer(4321.into(), "0,000").unwrap(), "4,321");
     }
 
-    // #[test]
-    // fn test_format_with_thousands_separator_large() {
-    //     assert_eq!(
-    //         format_integer(1_222_333.into(), "0,000").unwrap(),
-    //         "1,222,333"
-    //     );
-    // }
-
     #[test]
     fn test_format_with_thousands_separator_and_zero_prefix() {
         assert_eq!(format_integer(4321.into(), "00,000").unwrap(), "04,321");
     }
-
-    // #[test]
-    // fn test_format_with_thousands_negative() {
-    //     assert_eq!(
-    //         format_integer((-1_222_333).into(), "0,000").unwrap(),
-    //         "-1,222,333"
-    //     );
-    // }
 
     #[test]
     fn test_illegal_primary_token() {
@@ -214,12 +179,28 @@ mod tests {
     }
 
     // #[test]
-    // fn test_irregular_grouping_separator_with_mixed_separators() {
+    // fn test_format_with_thousands_negative_regular() {
     //     assert_eq!(
-    //         format_integer(1_222_333.into(), "1,222.000").unwrap(),
-    //         "1,222.333"
+    //         format_integer((-1_222_333).into(), "0,000").unwrap(),
+    //         "-1,222,333"
     //     );
     // }
+
+    // #[test]
+    // fn test_format_with_thousands_separator_large_regular() {
+    //     assert_eq!(
+    //         format_integer(1_222_333.into(), "0,000").unwrap(),
+    //         "1,222,333"
+    //     );
+    // }
+
+    #[test]
+    fn test_format_grouping_separator_with_irregular_separators() {
+        assert_eq!(
+            format_integer(1_222_333.into(), "1,222.000").unwrap(),
+            "1,222.333"
+        );
+    }
 
     // TODO validate that mandatory digits cannot come before optional digits
 
