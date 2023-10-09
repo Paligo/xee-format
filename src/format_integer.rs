@@ -8,10 +8,10 @@ pub enum Error {
 
 #[derive(Debug, PartialEq)]
 struct Picture {
-    width: usize,
-    thousands_separator: Option<char>,
+    pattern: Vec<Sign>,
 }
 
+#[derive(Debug, PartialEq)]
 enum Sign {
     OptionalDigit,
     MandatoryDigit,
@@ -63,30 +63,18 @@ impl Picture {
         let pattern = parse_decimal_digit_pattern(picture)?;
         validate_decimal_digit_pattern(&pattern)?;
 
-        let width = pattern.len();
-        let thousands_digits = pattern.iter().any(|c| matches!(c, Sign::GroupSeparator(_)));
-
-        if thousands_digits {
-            Ok(Self {
-                width,
-                thousands_separator: Some(','),
-            })
-        } else {
-            Ok(Self {
-                width,
-                thousands_separator: None,
-            })
-        }
+        Ok(Self { pattern })
     }
 
     fn format(&self, i: IBig) -> String {
-        let width = if i.is_negative() {
-            self.width + 1
-        } else {
-            self.width
-        };
+        let width = self.pattern.len();
+        let thousands_separator = self
+            .pattern
+            .iter()
+            .any(|c| matches!(c, Sign::GroupSeparator(_)));
+        let width = if i.is_negative() { width + 1 } else { width };
 
-        if let Some(_thousands_separator) = self.thousands_separator {
+        if thousands_separator {
             let s = i.to_string();
             s.chars()
                 .rev()
