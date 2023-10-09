@@ -38,18 +38,21 @@ fn validate_decimal_digit_pattern(pattern: Vec<Sign>) -> Result<(), Error> {
     }
 
     while let Some(sign) = signs.next() {
-        if matches!(sign, Sign::OptionalDigit)
-            && (!matches!(
-                signs.peek(),
-                Some(Sign::OptionalDigit) | Some(Sign::MandatoryDigit)
-            ))
-        {
-            return Err(Error::InvalidPictureString);
-        }
-        if matches!(sign, Sign::GroupSeparator)
-            && (matches!(signs.peek(), Some(Sign::GroupSeparator)) || signs.peek().is_none())
-        {
-            return Err(Error::InvalidPictureString);
+        match sign {
+            Sign::OptionalDigit => {
+                if !matches!(
+                    signs.peek(),
+                    Some(Sign::OptionalDigit) | Some(Sign::MandatoryDigit)
+                ) {
+                    return Err(Error::InvalidPictureString);
+                }
+            }
+            Sign::GroupSeparator => {
+                if matches!(signs.peek(), Some(Sign::GroupSeparator) | None) {
+                    return Err(Error::InvalidPictureString);
+                }
+            }
+            _ => {}
         }
     }
     Ok(())
