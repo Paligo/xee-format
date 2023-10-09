@@ -23,19 +23,53 @@ struct NonRegular(Vec<Sign>);
 struct Regular(char, usize);
 
 impl NonRegular {
-    fn signs(&self) -> impl Iterator<Item = &Sign> {
-        self.0.iter().rev()
+    fn signs(&self) -> impl Iterator<Item = Sign> + '_ {
+        self.0.iter().copied().rev()
     }
 }
 
 impl Regular {
-    fn signs(&self) -> impl Iterator<Item = &Sign> {
-        std::iter::empty()
+    fn signs(&self) -> impl Iterator<Item = Sign> + '_ {
+        RegularIterator::new(self.0, self.1)
+    }
+}
+
+struct RegularIterator {
+    position: usize,
+    group_separator: char,
+    grouping_size: usize,
+}
+
+impl RegularIterator {
+    fn new(group_separator: char, grouping_size: usize) -> Self {
+        Self {
+            position: 0,
+            grouping_size,
+            group_separator,
+        }
+    }
+}
+
+impl Iterator for RegularIterator {
+    type Item = Sign;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.position < self.grouping_size {
+            self.position += 1;
+            Some(Sign::MandatoryDigit)
+        } else {
+            self.position = 0;
+            Some(Sign::GroupSeparator(self.group_separator))
+        }
     }
 }
 
 impl Pattern {
-    fn signs(&self) -> Box<dyn Iterator<Item = &Sign> + '_> {
+    fn new(signs: Vec<Sign>) -> Self {
+        Self::NonRegular(NonRegular(signs))
+    }
+
+    fn signs(&self) -> Box<dyn Iterator<Item = Sign> + '_> {
         match self {
             Self::NonRegular(p) => Box::new(p.signs()),
             Self::Regular(p) => Box::new(p.signs()),
@@ -92,11 +126,11 @@ fn validate_decimal_digit_pattern(pattern: &[Sign]) -> Result<(), Error> {
 
 impl Picture {
     fn parse(picture: &str) -> Result<Self, Error> {
-        let pattern = parse_decimal_digit_pattern(picture)?;
-        validate_decimal_digit_pattern(&pattern)?;
+        let signs = parse_decimal_digit_pattern(picture)?;
+        validate_decimal_digit_pattern(&signs)?;
 
         Ok(Self {
-            pattern: Pattern::NonRegular(NonRegular(pattern)),
+            pattern: Pattern::new(signs),
         })
     }
 
@@ -123,7 +157,7 @@ impl Picture {
                         output.push('0')
                     }
                 }
-                Sign::GroupSeparator(c) => output.push(*c),
+                Sign::GroupSeparator(c) => output.push(c),
             }
         }
         for digit in digits {
@@ -238,4 +272,10 @@ mod tests {
     // TODO validate that mandatory digits cannot come before optional digits
 
     // is this allowed? #,?
+
+    // Next steps:
+
+    // * Detect regular patterns and produce a Regular
+    // * Stopping condition for the formatting loop: when we find a
+    // GroupSeparator but there are no digits left, we should stop
 }
