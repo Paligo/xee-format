@@ -375,10 +375,4 @@ mod tests {
     // TODO validate that mandatory digits cannot come before optional digits
 
     // is this allowed? #,?
-
-    // Next steps:
-
-    // * Detect regular patterns and produce a Regular
-    // * Stopping condition for the formatting loop: when we find a
-    // GroupSeparator but there are no digits left, we should stop
 }
