@@ -357,6 +357,14 @@ mod tests {
     }
 
     #[test]
+    fn test_format_grouping_separator_with_irregular_spacing() {
+        assert_eq!(
+            format_integer(1_222_333.into(), "12.22.000").unwrap(),
+            "12.22.333"
+        );
+    }
+
+    #[test]
     fn test_format_with_thousands_separator_large_regular() {
         assert_eq!(
             format_integer(1_222_333.into(), "0,000").unwrap(),
