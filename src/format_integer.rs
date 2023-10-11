@@ -213,31 +213,42 @@ impl Picture {
         let is_negative = i.is_negative();
         let i = i.abs();
 
+        // turn the integer into a string of digits
         let s = i.to_string();
-        let mut digits = s.chars().rev().peekable();
+
+        // the amount of zeros we want to produce is the amount of
+        // mandatory digits minus the digits we already produce
+        let zeros_amount = self
+            .pattern
+            .mandatory_digit_max()
+            .saturating_sub(s.chars().count());
+
+        // an iterator that produces the zeros we want to pad with
+        let mut zero_count = 0;
+        let zeros = std::iter::from_fn(|| {
+            if zero_count < zeros_amount {
+                zero_count += 1;
+                Some('0')
+            } else {
+                None
+            }
+        });
+
+        // an iterator over the digit chars
+        let digits = s.chars().rev();
+
+        // the zero padding comes after the proper digits
+        let mut digits = digits.chain(zeros).peekable();
+
+        let mut output = String::new();
 
         // we have an iterator for the pattern
-        let mut output = String::new();
-        let mandatory_digit_max = self.pattern.mandatory_digit_max();
-        let mut mandatory_digit_count = 0;
-
-        for sign in self.pattern.signs().peekable() {
+        for sign in self.pattern.signs() {
             match sign {
-                Sign::OptionalDigit => {
+                Sign::OptionalDigit | Sign::MandatoryDigit => {
                     if let Some(digit) = digits.next() {
                         output.push(digit)
                     }
-                }
-                Sign::MandatoryDigit => {
-                    if let Some(digit) = digits.next() {
-                        output.push(digit)
-                    } else {
-                        if mandatory_digit_count >= mandatory_digit_max {
-                            break;
-                        }
-                        output.push('0')
-                    }
-                    mandatory_digit_count += 1;
                 }
                 Sign::GroupSeparator(c) => {
                     if digits.peek().is_none() {
