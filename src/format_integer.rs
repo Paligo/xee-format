@@ -1,6 +1,45 @@
 use ibig::IBig;
 use num_traits::Signed;
 
+#[derive(Debug, Copy, Clone, PartialEq)]
+enum Sign {
+    OptionalDigit,
+    MandatoryDigit,
+    GroupSeparator(char),
+}
+
+#[derive(Debug, PartialEq)]
+struct NonRegular(Vec<Sign>);
+impl NonRegular {
+    fn signs(&self) -> impl Iterator<Item = Sign> + '_ {
+        self.0.iter().copied().rev()
+    }
+
+    fn mandatory_digit_max_count(&self) -> usize {
+        self.0
+            .iter()
+            .filter(|s| matches!(s, Sign::MandatoryDigit))
+            .count()
+    }
+}
+
+#[derive(Debug, PartialEq)]
+struct Regular {
+    group_separator: char,
+    count: usize,
+    mandatory_digit_max_count: usize,
+}
+
+impl Regular {
+    fn signs(&self) -> impl Iterator<Item = Sign> + '_ {
+        RegularIterator::new(self.group_separator, self.count)
+    }
+
+    fn mandatory_digit_max_count(&self) -> usize {
+        self.mandatory_digit_max_count
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub enum Error {
     InvalidPictureString,
@@ -15,38 +54,6 @@ struct Picture {
 enum Pattern {
     NonRegular(NonRegular),
     Regular(Regular),
-}
-
-#[derive(Debug, PartialEq)]
-struct NonRegular(Vec<Sign>);
-#[derive(Debug, PartialEq)]
-struct Regular {
-    group_separator: char,
-    count: usize,
-    mandatory_digit_max_count: usize,
-}
-
-impl NonRegular {
-    fn signs(&self) -> impl Iterator<Item = Sign> + '_ {
-        self.0.iter().copied().rev()
-    }
-
-    fn mandatory_digit_max_count(&self) -> usize {
-        self.0
-            .iter()
-            .filter(|s| matches!(s, Sign::MandatoryDigit))
-            .count()
-    }
-}
-
-impl Regular {
-    fn signs(&self) -> impl Iterator<Item = Sign> + '_ {
-        RegularIterator::new(self.group_separator, self.count)
-    }
-
-    fn mandatory_digit_max_count(&self) -> usize {
-        self.mandatory_digit_max_count
-    }
 }
 
 struct RegularIterator {
@@ -144,13 +151,6 @@ impl Pattern {
             Self::Regular(p) => p.mandatory_digit_max_count(),
         }
     }
-}
-
-#[derive(Debug, Copy, Clone, PartialEq)]
-enum Sign {
-    OptionalDigit,
-    MandatoryDigit,
-    GroupSeparator(char),
 }
 
 fn parse_decimal_digit_pattern(pattern: &str) -> Result<Vec<Sign>, Error> {
