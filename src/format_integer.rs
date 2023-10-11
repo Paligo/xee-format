@@ -11,13 +11,13 @@ enum Sign {
 #[derive(Debug, PartialEq)]
 struct NonRegular {
     signs: Vec<Sign>,
-    mandatory_digit_max_count: usize,
+    mandatory_digit_max: usize,
 }
 
 impl NonRegular {
     fn new(signs: Vec<Sign>) -> Self {
         Self {
-            mandatory_digit_max_count: signs
+            mandatory_digit_max: signs
                 .iter()
                 .filter(|s| matches!(s, Sign::MandatoryDigit))
                 .count(),
@@ -29,8 +29,8 @@ impl NonRegular {
         self.signs.iter().copied().rev()
     }
 
-    fn mandatory_digit_max_count(&self) -> usize {
-        self.mandatory_digit_max_count
+    fn mandatory_digit_max(&self) -> usize {
+        self.mandatory_digit_max
     }
 }
 
@@ -38,7 +38,7 @@ impl NonRegular {
 struct Regular {
     group_separator: char,
     count: usize,
-    mandatory_digit_max_count: usize,
+    mandatory_digit_max: usize,
 }
 
 impl Regular {
@@ -46,8 +46,8 @@ impl Regular {
         RegularIterator::new(self.group_separator, self.count)
     }
 
-    fn mandatory_digit_max_count(&self) -> usize {
-        self.mandatory_digit_max_count
+    fn mandatory_digit_max(&self) -> usize {
+        self.mandatory_digit_max
     }
 }
 
@@ -135,7 +135,7 @@ impl Pattern {
         last_separator.map(|last_separator| Regular {
             group_separator: last_separator,
             count: last_count.unwrap(),
-            mandatory_digit_max_count,
+            mandatory_digit_max: mandatory_digit_max_count,
         })
     }
 
@@ -146,10 +146,10 @@ impl Pattern {
         }
     }
 
-    fn mandatory_digit_max_count(&self) -> usize {
+    fn mandatory_digit_max(&self) -> usize {
         match self {
-            Self::NonRegular(p) => p.mandatory_digit_max_count(),
-            Self::Regular(p) => p.mandatory_digit_max_count(),
+            Self::NonRegular(p) => p.mandatory_digit_max(),
+            Self::Regular(p) => p.mandatory_digit_max(),
         }
     }
 }
@@ -218,7 +218,7 @@ impl Picture {
 
         // we have an iterator for the pattern
         let mut output = String::new();
-        let mandatory_digit_max_count = self.pattern.mandatory_digit_max_count();
+        let mandatory_digit_max = self.pattern.mandatory_digit_max();
         let mut mandatory_digit_count = 0;
 
         for sign in self.pattern.signs().peekable() {
@@ -232,7 +232,7 @@ impl Picture {
                     if let Some(digit) = digits.next() {
                         output.push(digit)
                     } else {
-                        if mandatory_digit_count >= mandatory_digit_max_count {
+                        if mandatory_digit_count >= mandatory_digit_max {
                             break;
                         }
                         output.push('0')
