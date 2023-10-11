@@ -11,18 +11,26 @@ enum Sign {
 #[derive(Debug, PartialEq)]
 struct NonRegular {
     signs: Vec<Sign>,
+    mandatory_digit_max_count: usize,
 }
 
 impl NonRegular {
+    fn new(signs: Vec<Sign>) -> Self {
+        Self {
+            mandatory_digit_max_count: signs
+                .iter()
+                .filter(|s| matches!(s, Sign::MandatoryDigit))
+                .count(),
+            signs,
+        }
+    }
+
     fn signs(&self) -> impl Iterator<Item = Sign> + '_ {
         self.signs.iter().copied().rev()
     }
 
     fn mandatory_digit_max_count(&self) -> usize {
-        self.signs
-            .iter()
-            .filter(|s| matches!(s, Sign::MandatoryDigit))
-            .count()
+        self.mandatory_digit_max_count
     }
 }
 
@@ -85,7 +93,7 @@ impl Pattern {
         if let Some(regular) = regular {
             Self::Regular(regular)
         } else {
-            Self::NonRegular(NonRegular { signs })
+            Self::NonRegular(NonRegular::new(signs))
         }
     }
 
