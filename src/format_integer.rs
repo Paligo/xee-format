@@ -9,14 +9,17 @@ enum Sign {
 }
 
 #[derive(Debug, PartialEq)]
-struct NonRegular(Vec<Sign>);
+struct NonRegular {
+    signs: Vec<Sign>,
+}
+
 impl NonRegular {
     fn signs(&self) -> impl Iterator<Item = Sign> + '_ {
-        self.0.iter().copied().rev()
+        self.signs.iter().copied().rev()
     }
 
     fn mandatory_digit_max_count(&self) -> usize {
-        self.0
+        self.signs
             .iter()
             .filter(|s| matches!(s, Sign::MandatoryDigit))
             .count()
@@ -38,22 +41,6 @@ impl Regular {
     fn mandatory_digit_max_count(&self) -> usize {
         self.mandatory_digit_max_count
     }
-}
-
-#[derive(Debug, PartialEq)]
-pub enum Error {
-    InvalidPictureString,
-}
-
-#[derive(Debug, PartialEq)]
-struct Picture {
-    pattern: Pattern,
-}
-
-#[derive(Debug, PartialEq)]
-enum Pattern {
-    NonRegular(NonRegular),
-    Regular(Regular),
 }
 
 struct RegularIterator {
@@ -86,13 +73,19 @@ impl Iterator for RegularIterator {
     }
 }
 
+#[derive(Debug, PartialEq)]
+enum Pattern {
+    NonRegular(NonRegular),
+    Regular(Regular),
+}
+
 impl Pattern {
     fn new(signs: Vec<Sign>) -> Self {
         let regular = Self::create_regular(&signs);
         if let Some(regular) = regular {
             Self::Regular(regular)
         } else {
-            Self::NonRegular(NonRegular(signs))
+            Self::NonRegular(NonRegular { signs })
         }
     }
 
@@ -193,6 +186,11 @@ fn validate_decimal_digit_pattern(pattern: &[Sign]) -> Result<(), Error> {
     Ok(())
 }
 
+#[derive(Debug, PartialEq)]
+struct Picture {
+    pattern: Pattern,
+}
+
 impl Picture {
     fn parse(picture: &str) -> Result<Self, Error> {
         let signs = parse_decimal_digit_pattern(picture)?;
@@ -254,6 +252,11 @@ impl Picture {
 pub fn format_integer(i: IBig, picture: &str) -> Result<String, Error> {
     let picture = Picture::parse(picture)?;
     Ok(picture.format(i))
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Error {
+    InvalidPictureString,
 }
 
 #[cfg(test)]
