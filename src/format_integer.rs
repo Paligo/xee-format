@@ -364,13 +364,13 @@ mod tests {
         );
     }
 
-    // #[test]
-    // fn test_format_with_thousands_negative_regular() {
-    //     assert_eq!(
-    //         format_integer((-1_222_333).into(), "0,000").unwrap(),
-    //         "-1,222,333"
-    //     );
-    // }
+    #[test]
+    fn test_format_with_thousands_negative_regular() {
+        assert_eq!(
+            format_integer((-1_222_333).into(), "0,000").unwrap(),
+            "-1,222,333"
+        );
+    }
 
     // TODO validate that mandatory digits cannot come before optional digits
 
