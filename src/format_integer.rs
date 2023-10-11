@@ -381,6 +381,7 @@ mod tests {
     }
 
     // TODO validate that mandatory digits cannot come before optional digits
+    // TODO: unicode family for digits and grouping separators
 
     // is this allowed? #,?
 }
