@@ -20,17 +20,32 @@ enum Pattern {
 #[derive(Debug, PartialEq)]
 struct NonRegular(Vec<Sign>);
 #[derive(Debug, PartialEq)]
-struct Regular(char, usize);
+struct Regular {
+    group_separator: char,
+    count: usize,
+    mandatory_digit_max_count: usize,
+}
 
 impl NonRegular {
     fn signs(&self) -> impl Iterator<Item = Sign> + '_ {
         self.0.iter().copied().rev()
     }
+
+    fn mandatory_digit_max_count(&self) -> usize {
+        self.0
+            .iter()
+            .filter(|s| matches!(s, Sign::MandatoryDigit))
+            .count()
+    }
 }
 
 impl Regular {
     fn signs(&self) -> impl Iterator<Item = Sign> + '_ {
-        RegularIterator::new(self.0, self.1)
+        RegularIterator::new(self.group_separator, self.count)
+    }
+
+    fn mandatory_digit_max_count(&self) -> usize {
+        self.mandatory_digit_max_count
     }
 }
 
@@ -66,13 +81,67 @@ impl Iterator for RegularIterator {
 
 impl Pattern {
     fn new(signs: Vec<Sign>) -> Self {
-        Self::NonRegular(NonRegular(signs))
+        let regular = Self::create_regular(&signs);
+        if let Some(regular) = regular {
+            Self::Regular(regular)
+        } else {
+            Self::NonRegular(NonRegular(signs))
+        }
+    }
+
+    fn create_regular(signs: &[Sign]) -> Option<Regular> {
+        let mut last_separator = None;
+        let mut last_count = None;
+        let mut count = 0;
+        let mut mandatory_digit_max_count = 0;
+
+        for sign in signs.iter().rev() {
+            match sign {
+                Sign::GroupSeparator(c) => {
+                    if let Some(last_separator) = last_separator {
+                        if last_separator != *c {
+                            return None;
+                        }
+                    } else {
+                        last_separator = Some(*c);
+                    }
+                    if let Some(last_count) = last_count {
+                        if count != last_count {
+                            return None;
+                        }
+                    } else {
+                        last_count = Some(count);
+                    }
+                    count = 0;
+                }
+                Sign::MandatoryDigit { .. } => {
+                    mandatory_digit_max_count += 1;
+                    count += 1;
+                }
+                Sign::OptionalDigit => {
+                    count += 1;
+                }
+            }
+        }
+
+        last_separator.map(|last_separator| Regular {
+            group_separator: last_separator,
+            count: last_count.unwrap(),
+            mandatory_digit_max_count,
+        })
     }
 
     fn signs(&self) -> Box<dyn Iterator<Item = Sign> + '_> {
         match self {
             Self::NonRegular(p) => Box::new(p.signs()),
             Self::Regular(p) => Box::new(p.signs()),
+        }
+    }
+
+    fn mandatory_digit_max_count(&self) -> usize {
+        match self {
+            Self::NonRegular(p) => p.mandatory_digit_max_count(),
+            Self::Regular(p) => p.mandatory_digit_max_count(),
         }
     }
 }
@@ -139,11 +208,14 @@ impl Picture {
         let i = i.abs();
 
         let s = i.to_string();
-        let mut digits = s.chars().rev();
+        let mut digits = s.chars().rev().peekable();
 
         // we have an iterator for the pattern
         let mut output = String::new();
-        for sign in self.pattern.signs() {
+        let mandatory_digit_max_count = self.pattern.mandatory_digit_max_count();
+        let mut mandatory_digit_count = 0;
+
+        for sign in self.pattern.signs().peekable() {
             match sign {
                 Sign::OptionalDigit => {
                     if let Some(digit) = digits.next() {
@@ -154,10 +226,19 @@ impl Picture {
                     if let Some(digit) = digits.next() {
                         output.push(digit)
                     } else {
+                        if mandatory_digit_count >= mandatory_digit_max_count {
+                            break;
+                        }
                         output.push('0')
                     }
+                    mandatory_digit_count += 1;
                 }
-                Sign::GroupSeparator(c) => output.push(c),
+                Sign::GroupSeparator(c) => {
+                    if digits.peek().is_none() {
+                        break;
+                    }
+                    output.push(c)
+                }
             }
         }
         for digit in digits {
@@ -253,13 +334,13 @@ mod tests {
         );
     }
 
-    // #[test]
-    // fn test_format_with_thousands_separator_large_regular() {
-    //     assert_eq!(
-    //         format_integer(1_222_333.into(), "0,000").unwrap(),
-    //         "1,222,333"
-    //     );
-    // }
+    #[test]
+    fn test_format_with_thousands_separator_large_regular() {
+        assert_eq!(
+            format_integer(1_222_333.into(), "0,000").unwrap(),
+            "1,222,333"
+        );
+    }
 
     // #[test]
     // fn test_format_with_thousands_negative_regular() {
