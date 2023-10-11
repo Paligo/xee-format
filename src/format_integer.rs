@@ -240,7 +240,7 @@ impl Picture {
         // the zero padding comes after the proper digits
         let mut digits = digits.chain(zeros).peekable();
 
-        let mut output = String::new();
+        let mut output = Vec::new();
 
         // we have an iterator for the pattern
         for sign in self.pattern.signs() {
@@ -264,7 +264,7 @@ impl Picture {
         if is_negative {
             output.push('-')
         }
-        output.chars().rev().collect()
+        output.iter().rev().collect()
     }
 }
 
