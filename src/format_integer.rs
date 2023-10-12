@@ -93,8 +93,8 @@ enum Pattern {
 
 impl Pattern {
     fn new(pattern: &str) -> Result<Self, Error> {
-        let signs = Self::parse_decimal_digit_pattern(pattern)?;
-        Self::validate_decimal_digit_pattern(&signs)?;
+        let signs = Self::parse(pattern)?;
+        Self::validate(&signs)?;
 
         let regular = Self::create_regular(&signs);
         Ok(if let Some(regular) = regular {
@@ -104,7 +104,7 @@ impl Pattern {
         })
     }
 
-    fn parse_decimal_digit_pattern(pattern: &str) -> Result<Vec<Sign>, Error> {
+    fn parse(pattern: &str) -> Result<Vec<Sign>, Error> {
         pattern
             .chars()
             .map(|c| match c {
@@ -116,7 +116,7 @@ impl Pattern {
             .collect()
     }
 
-    fn validate_decimal_digit_pattern(pattern: &[Sign]) -> Result<(), Error> {
+    fn validate(pattern: &[Sign]) -> Result<(), Error> {
         let mut signs = pattern.iter().peekable();
 
         if matches!(signs.peek(), Some(Sign::GroupSeparator(_))) {
