@@ -26,7 +26,11 @@ impl NonRegular {
     }
 
     fn signs(&self) -> impl Iterator<Item = Sign> + '_ {
-        self.signs.iter().copied().rev()
+        self.signs
+            .iter()
+            .copied()
+            .rev()
+            .chain(std::iter::repeat(Sign::OptionalDigit))
     }
 
     fn mandatory_digit_max(&self) -> usize {
@@ -248,6 +252,8 @@ impl Picture {
                 Sign::OptionalDigit | Sign::MandatoryDigit => {
                     if let Some(digit) = digits.next() {
                         output.push(digit)
+                    } else {
+                        break;
                     }
                 }
                 Sign::GroupSeparator(c) => {
@@ -257,9 +263,6 @@ impl Picture {
                     output.push(c)
                 }
             }
-        }
-        for digit in digits {
-            output.push(digit)
         }
         if is_negative {
             output.push('-')
