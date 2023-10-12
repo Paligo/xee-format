@@ -370,6 +370,11 @@ mod tests {
         assert_eq!(Picture::parse("0,#0"), Err(Error::InvalidPictureString));
     }
 
+    // #[test]
+    // fn test_non_ascii_digit_as_mandatory_digit() {
+    //     assert!(Picture::parse("١").is_ok());
+    // }
+
     #[test]
     fn test_format_grouping_separator_with_irregular_separators() {
         assert_eq!(
@@ -402,7 +407,6 @@ mod tests {
         );
     }
 
-    // TODO validate that mandatory digits cannot come before optional digits
     // TODO: unicode family for digits and grouping separators
 
     // is this allowed? #,?
