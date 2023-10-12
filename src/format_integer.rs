@@ -105,11 +105,21 @@ impl Pattern {
     }
 
     fn parse(pattern: &str) -> Result<Vec<Sign>, Error> {
+        let mut mandatory_seen = false;
         pattern
             .chars()
             .map(|c| match c {
-                '#' => Ok(Sign::OptionalDigit),
-                '0'..='9' => Ok(Sign::MandatoryDigit),
+                '#' => {
+                    if !mandatory_seen {
+                        Ok(Sign::OptionalDigit)
+                    } else {
+                        Err(Error::InvalidPictureString)
+                    }
+                }
+                '0'..='9' => {
+                    mandatory_seen = true;
+                    Ok(Sign::MandatoryDigit)
+                }
                 ',' | '.' => Ok(Sign::GroupSeparator(c)),
                 _ => Err(Error::InvalidPictureString),
             })
@@ -350,10 +360,15 @@ mod tests {
         assert_eq!(Picture::parse("#"), Err(Error::InvalidPictureString));
     }
 
-    // #[test]
-    // fn test_optional_digit_sign_after_mandatory_digit_sign_is_illegal() {
-    //     assert_eq!(Picture::parse("0#0"), Err(Error::InvalidPictureString));
-    // }
+    #[test]
+    fn test_optional_digit_sign_after_mandatory_digit_sign_is_illegal() {
+        assert_eq!(Picture::parse("0#0"), Err(Error::InvalidPictureString));
+    }
+
+    #[test]
+    fn test_optional_digit_sign_after_grouping_separator_and_mandatory_digit_sign_is_illegal() {
+        assert_eq!(Picture::parse("0,#0"), Err(Error::InvalidPictureString));
+    }
 
     #[test]
     fn test_format_grouping_separator_with_irregular_separators() {
