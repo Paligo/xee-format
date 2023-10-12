@@ -92,13 +92,16 @@ enum Pattern {
 }
 
 impl Pattern {
-    fn new(signs: Vec<Sign>) -> Self {
+    fn new(pattern: &str) -> Result<Self, Error> {
+        let signs = parse_decimal_digit_pattern(pattern)?;
+        validate_decimal_digit_pattern(&signs)?;
+
         let regular = Self::create_regular(&signs);
-        if let Some(regular) = regular {
+        Ok(if let Some(regular) = regular {
             Self::Regular(regular)
         } else {
             Self::NonRegular(NonRegular::new(signs))
-        }
+        })
     }
 
     fn create_regular(signs: &[Sign]) -> Option<Regular> {
@@ -205,11 +208,8 @@ struct Picture {
 
 impl Picture {
     fn parse(picture: &str) -> Result<Self, Error> {
-        let signs = parse_decimal_digit_pattern(picture)?;
-        validate_decimal_digit_pattern(&signs)?;
-
         Ok(Self {
-            pattern: Pattern::new(signs),
+            pattern: Pattern::new(picture)?,
         })
     }
 
@@ -244,30 +244,29 @@ impl Picture {
         // the zero padding comes after the proper digits
         let mut digits = digits.chain(zeros).peekable();
 
-        let mut output = Vec::new();
+        // we either need to add a negative sign in the end or no sign
+        let negative_vec = if is_negative { vec!['-'] } else { vec![] };
 
-        // we have an iterator for the pattern
-        for sign in self.pattern.signs() {
-            match sign {
-                Sign::OptionalDigit | Sign::MandatoryDigit => {
-                    if let Some(digit) = digits.next() {
-                        output.push(digit)
-                    } else {
-                        break;
-                    }
-                }
+        // now for as much as we have digits, we keep taking signs (which is
+        // infinite), and process them accordingly
+        let mut signs = self.pattern.signs();
+        let output = std::iter::from_fn(|| {
+            signs.next().and_then(|sign| match sign {
+                Sign::OptionalDigit | Sign::MandatoryDigit => digits.next(),
                 Sign::GroupSeparator(c) => {
                     if digits.peek().is_none() {
-                        break;
+                        None
+                    } else {
+                        Some(c)
                     }
-                    output.push(c)
                 }
-            }
-        }
-        if is_negative {
-            output.push('-')
-        }
-        output.iter().rev().collect()
+            })
+        })
+        .chain(negative_vec);
+
+        let mut output = output.collect::<Vec<_>>();
+        output.reverse();
+        output.iter().collect()
     }
 }
 
@@ -350,6 +349,11 @@ mod tests {
     fn test_optional_digit_by_itself_is_illegal() {
         assert_eq!(Picture::parse("#"), Err(Error::InvalidPictureString));
     }
+
+    // #[test]
+    // fn test_optional_digit_sign_after_mandatory_digit_sign_is_illegal() {
+    //     assert_eq!(Picture::parse("0#0"), Err(Error::InvalidPictureString));
+    // }
 
     #[test]
     fn test_format_grouping_separator_with_irregular_separators() {
