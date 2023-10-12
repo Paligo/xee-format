@@ -93,8 +93,8 @@ enum Pattern {
 
 impl Pattern {
     fn new(pattern: &str) -> Result<Self, Error> {
-        let signs = parse_decimal_digit_pattern(pattern)?;
-        validate_decimal_digit_pattern(&signs)?;
+        let signs = Self::parse_decimal_digit_pattern(pattern)?;
+        Self::validate_decimal_digit_pattern(&signs)?;
 
         let regular = Self::create_regular(&signs);
         Ok(if let Some(regular) = regular {
@@ -102,6 +102,46 @@ impl Pattern {
         } else {
             Self::NonRegular(NonRegular::new(signs))
         })
+    }
+
+    fn parse_decimal_digit_pattern(pattern: &str) -> Result<Vec<Sign>, Error> {
+        pattern
+            .chars()
+            .map(|c| match c {
+                '#' => Ok(Sign::OptionalDigit),
+                '0'..='9' => Ok(Sign::MandatoryDigit),
+                ',' | '.' => Ok(Sign::GroupSeparator(c)),
+                _ => Err(Error::InvalidPictureString),
+            })
+            .collect()
+    }
+
+    fn validate_decimal_digit_pattern(pattern: &[Sign]) -> Result<(), Error> {
+        let mut signs = pattern.iter().peekable();
+
+        if matches!(signs.peek(), Some(Sign::GroupSeparator(_))) {
+            return Err(Error::InvalidPictureString);
+        }
+
+        while let Some(sign) = signs.next() {
+            match sign {
+                Sign::OptionalDigit => {
+                    if !matches!(
+                        signs.peek(),
+                        Some(Sign::OptionalDigit) | Some(Sign::MandatoryDigit)
+                    ) {
+                        return Err(Error::InvalidPictureString);
+                    }
+                }
+                Sign::GroupSeparator(_) => {
+                    if matches!(signs.peek(), Some(Sign::GroupSeparator(_)) | None) {
+                        return Err(Error::InvalidPictureString);
+                    }
+                }
+                _ => {}
+            }
+        }
+        Ok(())
     }
 
     fn create_regular(signs: &[Sign]) -> Option<Regular> {
@@ -159,46 +199,6 @@ impl Pattern {
             Self::Regular(p) => p.mandatory_digit_max(),
         }
     }
-}
-
-fn parse_decimal_digit_pattern(pattern: &str) -> Result<Vec<Sign>, Error> {
-    pattern
-        .chars()
-        .map(|c| match c {
-            '#' => Ok(Sign::OptionalDigit),
-            '0'..='9' => Ok(Sign::MandatoryDigit),
-            ',' | '.' => Ok(Sign::GroupSeparator(c)),
-            _ => Err(Error::InvalidPictureString),
-        })
-        .collect()
-}
-
-fn validate_decimal_digit_pattern(pattern: &[Sign]) -> Result<(), Error> {
-    let mut signs = pattern.iter().peekable();
-
-    if matches!(signs.peek(), Some(Sign::GroupSeparator(_))) {
-        return Err(Error::InvalidPictureString);
-    }
-
-    while let Some(sign) = signs.next() {
-        match sign {
-            Sign::OptionalDigit => {
-                if !matches!(
-                    signs.peek(),
-                    Some(Sign::OptionalDigit) | Some(Sign::MandatoryDigit)
-                ) {
-                    return Err(Error::InvalidPictureString);
-                }
-            }
-            Sign::GroupSeparator(_) => {
-                if matches!(signs.peek(), Some(Sign::GroupSeparator(_)) | None) {
-                    return Err(Error::InvalidPictureString);
-                }
-            }
-            _ => {}
-        }
-    }
-    Ok(())
 }
 
 #[derive(Debug, PartialEq)]
