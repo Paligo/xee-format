@@ -1,3 +1,4 @@
+use crate::digit::DigitFamily;
 use ibig::IBig;
 use num_traits::Signed;
 
@@ -106,6 +107,7 @@ impl Pattern {
 
     fn parse(pattern: &str) -> Result<Vec<Sign>, Error> {
         let mut mandatory_seen = false;
+        let mut digit_family = None;
         pattern
             .chars()
             .map(|c| match c {
@@ -116,12 +118,25 @@ impl Pattern {
                         Err(Error::InvalidPictureString)
                     }
                 }
-                '0'..='9' => {
-                    mandatory_seen = true;
-                    Ok(Sign::MandatoryDigit)
-                }
+                // '0'..='9' => {
+                //     mandatory_seen = true;
+                //     Ok(Sign::MandatoryDigit)
+                // }
                 ',' | '.' => Ok(Sign::GroupSeparator(c)),
-                _ => Err(Error::InvalidPictureString),
+                _ => match DigitFamily::new(c) {
+                    Some(found_digit_family) => {
+                        if let Some(digit_family) = digit_family {
+                            if found_digit_family != digit_family {
+                                return Err(Error::InvalidPictureString);
+                            }
+                        } else {
+                            digit_family = Some(found_digit_family);
+                        }
+                        mandatory_seen = true;
+                        Ok(Sign::MandatoryDigit)
+                    }
+                    None => Err(Error::InvalidPictureString),
+                },
             })
             .collect()
     }
@@ -370,10 +385,20 @@ mod tests {
         assert_eq!(Picture::parse("0,#0"), Err(Error::InvalidPictureString));
     }
 
-    // #[test]
-    // fn test_non_ascii_digit_as_mandatory_digit() {
-    //     assert!(Picture::parse("١").is_ok());
-    // }
+    #[test]
+    fn test_digit_in_different_digit_family() {
+        assert!(Picture::parse("٠").is_ok());
+    }
+
+    #[test]
+    fn test_digit_in_different_digit_family2() {
+        assert!(Picture::parse("١").is_ok());
+    }
+
+    #[test]
+    fn test_digits_not_in_same_digit_family_is_illegal() {
+        assert_eq!(Picture::parse("0٠"), Err(Error::InvalidPictureString));
+    }
 
     #[test]
     fn test_format_grouping_separator_with_irregular_separators() {
@@ -406,8 +431,6 @@ mod tests {
             "-1,222,333"
         );
     }
-
-    // TODO: unicode family for digits and grouping separators
 
     // is this allowed? #,?
 }

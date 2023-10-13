@@ -11,7 +11,7 @@ impl AsciiDigit {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct DigitFamily(char);
+pub(crate) struct DigitFamily(char);
 
 impl DigitFamily {
     pub(crate) fn new(c: char) -> Option<Self> {
