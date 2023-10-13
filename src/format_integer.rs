@@ -455,5 +455,7 @@ mod tests {
         assert_eq!(format_integer(15.into(), "١").unwrap(), "١٥");
     }
 
-    // is this allowed? #,?
+    // TODO:
+    // - check that group separator isn't in the wrong character class
+    // - is this allowed? #,?
 }
