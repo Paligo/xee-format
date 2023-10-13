@@ -1,4 +1,4 @@
-use crate::digit::DigitFamily;
+use crate::digit::{AsciiDigit, DigitFamily};
 use ibig::IBig;
 use num_traits::Signed;
 
@@ -13,16 +13,18 @@ enum Sign {
 struct NonRegular {
     signs: Vec<Sign>,
     mandatory_digit_max: usize,
+    digit_family: Option<DigitFamily>,
 }
 
 impl NonRegular {
-    fn new(signs: Vec<Sign>) -> Self {
+    fn new(signs: Vec<Sign>, digit_family: Option<DigitFamily>) -> Self {
         Self {
             mandatory_digit_max: signs
                 .iter()
                 .filter(|s| matches!(s, Sign::MandatoryDigit))
                 .count(),
             signs,
+            digit_family,
         }
     }
 
@@ -44,6 +46,7 @@ struct Regular {
     group_separator: char,
     count: usize,
     mandatory_digit_max: usize,
+    digit_family: Option<DigitFamily>,
 }
 
 impl Regular {
@@ -94,21 +97,22 @@ enum Pattern {
 
 impl Pattern {
     fn new(pattern: &str) -> Result<Self, Error> {
-        let signs = Self::parse(pattern)?;
+        let (signs, digit_family) = Self::parse(pattern)?;
         Self::validate(&signs)?;
 
-        let regular = Self::create_regular(&signs);
+        let regular = Self::create_regular(&signs, digit_family);
         Ok(if let Some(regular) = regular {
             Self::Regular(regular)
         } else {
-            Self::NonRegular(NonRegular::new(signs))
+            Self::NonRegular(NonRegular::new(signs, digit_family))
         })
     }
 
-    fn parse(pattern: &str) -> Result<Vec<Sign>, Error> {
+    fn parse(pattern: &str) -> Result<(Vec<Sign>, Option<DigitFamily>), Error> {
         let mut mandatory_seen = false;
         let mut digit_family = None;
-        pattern
+
+        let signs: Result<Vec<Sign>, Error> = pattern
             .chars()
             .map(|c| match c {
                 '#' => {
@@ -133,7 +137,8 @@ impl Pattern {
                     Ok(Sign::MandatoryDigit)
                 }
             })
-            .collect()
+            .collect();
+        Ok((signs?, digit_family))
     }
 
     fn validate(pattern: &[Sign]) -> Result<(), Error> {
@@ -164,7 +169,7 @@ impl Pattern {
         Ok(())
     }
 
-    fn create_regular(signs: &[Sign]) -> Option<Regular> {
+    fn create_regular(signs: &[Sign], digit_family: Option<DigitFamily>) -> Option<Regular> {
         let mut last_separator = None;
         let mut last_count = None;
         let mut count = 0;
@@ -203,6 +208,7 @@ impl Pattern {
             group_separator: last_separator,
             count: last_count.unwrap(),
             mandatory_digit_max: mandatory_digit_max_count,
+            digit_family,
         })
     }
 
@@ -217,6 +223,13 @@ impl Pattern {
         match self {
             Self::NonRegular(p) => p.mandatory_digit_max(),
             Self::Regular(p) => p.mandatory_digit_max(),
+        }
+    }
+
+    fn digit_family(&self) -> Option<DigitFamily> {
+        match self {
+            Self::NonRegular(p) => p.digit_family,
+            Self::Regular(p) => p.digit_family,
         }
     }
 }
@@ -267,12 +280,23 @@ impl Picture {
         // we either need to add a negative sign in the end or no sign
         let negative_vec = if is_negative { vec!['-'] } else { vec![] };
 
-        // now for as much as we have digits, we keep taking signs (which is
-        // infinite), and process them accordingly
+        // for as many digit as we have, we take a sign (of which we get an
+        // infinite supply for both regular and non-regular), and process them
+        // accordingly
         let mut signs = self.pattern.signs();
+        let digit_family = self.pattern.digit_family();
+
         let output = std::iter::from_fn(|| {
             signs.next().and_then(|sign| match sign {
-                Sign::OptionalDigit | Sign::MandatoryDigit => digits.next(),
+                Sign::OptionalDigit | Sign::MandatoryDigit => {
+                    let digit = digits.next()?;
+                    let digit = if let Some(digit_family) = digit_family {
+                        digit_family.digit(AsciiDigit::new(digit))
+                    } else {
+                        digit
+                    };
+                    Some(digit)
+                }
                 Sign::GroupSeparator(c) => {
                     if digits.peek().is_none() {
                         None
@@ -425,6 +449,10 @@ mod tests {
             format_integer((-1_222_333).into(), "0,000").unwrap(),
             "-1,222,333"
         );
+    }
+    #[test]
+    fn test_format_digit_as_different_digit_family() {
+        assert_eq!(format_integer(15.into(), "١").unwrap(), "١٥");
     }
 
     // is this allowed? #,?
