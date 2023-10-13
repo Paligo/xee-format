@@ -118,10 +118,6 @@ impl Pattern {
                         Err(Error::InvalidPictureString)
                     }
                 }
-                // '0'..='9' => {
-                //     mandatory_seen = true;
-                //     Ok(Sign::MandatoryDigit)
-                // }
                 ',' | '.' => Ok(Sign::GroupSeparator(c)),
                 _ => {
                     let found_digit_family =
