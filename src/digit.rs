@@ -42,6 +42,7 @@ mod tests {
     fn test_digit_family() {
         assert_eq!(digit_family('1'), Some('0'));
         assert_eq!(digit_family('١'), Some('٠'));
+        assert_eq!(digit_family('߅'), Some('߀'));
         assert_eq!(digit_family('a'), None);
     }
 }
