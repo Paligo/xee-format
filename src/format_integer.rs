@@ -123,20 +123,19 @@ impl Pattern {
                 //     Ok(Sign::MandatoryDigit)
                 // }
                 ',' | '.' => Ok(Sign::GroupSeparator(c)),
-                _ => match DigitFamily::new(c) {
-                    Some(found_digit_family) => {
-                        if let Some(digit_family) = digit_family {
-                            if found_digit_family != digit_family {
-                                return Err(Error::InvalidPictureString);
-                            }
-                        } else {
-                            digit_family = Some(found_digit_family);
+                _ => {
+                    let found_digit_family =
+                        DigitFamily::new(c).ok_or(Error::InvalidPictureString)?;
+                    if let Some(digit_family) = digit_family {
+                        if found_digit_family != digit_family {
+                            return Err(Error::InvalidPictureString);
                         }
-                        mandatory_seen = true;
-                        Ok(Sign::MandatoryDigit)
+                    } else {
+                        digit_family = Some(found_digit_family);
                     }
-                    None => Err(Error::InvalidPictureString),
-                },
+                    mandatory_seen = true;
+                    Ok(Sign::MandatoryDigit)
+                }
             })
             .collect()
     }
