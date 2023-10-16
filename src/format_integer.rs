@@ -1,4 +1,4 @@
-use crate::digit::{AsciiDigit, DigitFamily};
+use crate::digit::{is_group_separator, AsciiDigit, DigitFamily};
 use ibig::IBig;
 use num_traits::Signed;
 
@@ -122,8 +122,10 @@ impl Pattern {
                         Err(Error::InvalidPictureString)
                     }
                 }
-                ',' | '.' => Ok(Sign::GroupSeparator(c)),
                 _ => {
+                    if is_group_separator(c) {
+                        return Ok(Sign::GroupSeparator(c));
+                    }
                     let found_digit_family =
                         DigitFamily::new(c).ok_or(Error::InvalidPictureString)?;
                     if let Some(digit_family) = digit_family {
@@ -417,6 +419,18 @@ mod tests {
     #[test]
     fn test_digits_not_in_same_digit_family_is_illegal() {
         assert_eq!(Picture::parse("0٠"), Err(Error::InvalidPictureString));
+    }
+
+    #[test]
+    fn test_letter_is_legal_separator() {
+        assert!(Picture::parse("0!0").is_ok());
+    }
+
+    #[test]
+    fn test_reject_illegal_separator() {
+        // the roman numeral I is in the digit family Nl, which is not
+        // a valid separator
+        assert_eq!(Picture::parse("0Ⅰ0"), Err(Error::InvalidPictureString));
     }
 
     #[test]

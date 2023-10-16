@@ -40,6 +40,22 @@ impl DigitFamily {
     }
 }
 
+pub(crate) fn is_group_separator(c: char) -> bool {
+    let category = icu::properties::maps::general_category().get(c);
+    //  Nd, Nl, No, Lu, Ll, Lt, Lm or Lo are not allowed to be group separators
+    !matches!(
+        category,
+        GeneralCategory::DecimalNumber
+            | GeneralCategory::LetterNumber
+            | GeneralCategory::OtherNumber
+            | GeneralCategory::UppercaseLetter
+            | GeneralCategory::LowercaseLetter
+            | GeneralCategory::TitlecaseLetter
+            | GeneralCategory::ModifierLetter
+            | GeneralCategory::OtherLetter
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -62,5 +78,14 @@ mod tests {
             DigitFamily::new('߀').unwrap().digit(AsciiDigit::new('5')),
             '߅'
         );
+    }
+
+    #[test]
+    fn test_is_group_separator() {
+        assert!(is_group_separator('!'));
+        assert!(is_group_separator(','));
+        assert!(!is_group_separator('Ⅰ'));
+        assert!(!is_group_separator('1'));
+        assert!(!is_group_separator('x'))
     }
 }
