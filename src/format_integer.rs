@@ -114,18 +114,19 @@ impl Pattern {
 
         let signs: Result<Vec<Sign>, Error> = pattern
             .chars()
-            .map(|c| match c {
-                '#' => {
+            .map(|c| {
+                if c == '#' {
+                    // optional digit
                     if !mandatory_seen {
                         Ok(Sign::OptionalDigit)
                     } else {
                         Err(Error::InvalidPictureString)
                     }
-                }
-                _ => {
-                    if is_group_separator(c) {
-                        return Ok(Sign::GroupSeparator(c));
-                    }
+                } else if is_group_separator(c) {
+                    // group separator
+                    Ok(Sign::GroupSeparator(c))
+                } else {
+                    // mandatory digit
                     let found_digit_family =
                         DigitFamily::new(c).ok_or(Error::InvalidPictureString)?;
                     if let Some(digit_family) = digit_family {
