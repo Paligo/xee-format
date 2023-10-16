@@ -495,4 +495,12 @@ mod tests {
     fn test_format_with_optional_digits_and_thousands() {
         assert_eq!(format_integer(15453.into(), "#,##1").unwrap(), "15,453");
     }
+
+    #[test]
+    fn test_format_with_million_and_thousand_separator() {
+        assert_eq!(
+            format_integer(1_000_000.into(), "#.##,##1").unwrap(),
+            "10.00,000"
+        );
+    }
 }
