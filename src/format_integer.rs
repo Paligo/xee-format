@@ -155,7 +155,9 @@ impl Pattern {
                 Sign::OptionalDigit => {
                     if !matches!(
                         signs.peek(),
-                        Some(Sign::OptionalDigit) | Some(Sign::MandatoryDigit)
+                        Some(Sign::OptionalDigit)
+                            | Some(Sign::GroupSeparator(_))
+                            | Some(Sign::MandatoryDigit)
                     ) {
                         return Err(Error::InvalidPictureString);
                     }
@@ -483,7 +485,14 @@ mod tests {
         // seem to take this into account however.
         assert_eq!(format_integer(15.into(), "߀").unwrap(), "߁߅")
     }
-    // TODO:
-    // - check that group separator isn't in the wrong character class
-    // - is this allowed? #,?
+
+    #[test]
+    fn test_format_with_only_optional_digits() {
+        assert_eq!(format_integer(15.into(), "#1").unwrap(), "15");
+    }
+
+    #[test]
+    fn test_format_with_optional_digits_and_thousands() {
+        assert_eq!(format_integer(15453.into(), "#,##1").unwrap(), "15,453");
+    }
 }
