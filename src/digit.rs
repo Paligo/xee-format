@@ -60,23 +60,38 @@ pub(crate) fn is_group_separator(c: char) -> bool {
 mod tests {
     use super::*;
 
+    const ARAB_INDIC_DIGIT_ZERO: char = '٠';
+    const ARAB_INDIC_DIGIT_ONE: char = '١';
+    const NKO_DIGIT_ZERO: char = '߀';
+    const NKO_DIGIT_FIVE: char = '߅';
+
     #[test]
     fn test_digit_family() {
         assert_eq!(DigitFamily::new('1'), Some(DigitFamily('0')));
-        assert_eq!(DigitFamily::new('١'), Some(DigitFamily('٠')));
-        assert_eq!(DigitFamily::new('߅'), Some(DigitFamily('߀')));
+        assert_eq!(
+            DigitFamily::new(ARAB_INDIC_DIGIT_ONE),
+            Some(DigitFamily(ARAB_INDIC_DIGIT_ZERO))
+        );
+        assert_eq!(
+            DigitFamily::new(NKO_DIGIT_FIVE),
+            Some(DigitFamily(NKO_DIGIT_ZERO))
+        );
         assert_eq!(DigitFamily::new('a'), None);
     }
 
     #[test]
     fn test_ascii_digit_into_digit_family() {
         assert_eq!(
-            DigitFamily::new('٠').unwrap().digit(AsciiDigit::new('1')),
-            '١'
+            DigitFamily::new(ARAB_INDIC_DIGIT_ZERO)
+                .unwrap()
+                .digit(AsciiDigit::new('1')),
+            ARAB_INDIC_DIGIT_ONE
         );
         assert_eq!(
-            DigitFamily::new('߀').unwrap().digit(AsciiDigit::new('5')),
-            '߅'
+            DigitFamily::new(NKO_DIGIT_ZERO)
+                .unwrap()
+                .digit(AsciiDigit::new('5')),
+            NKO_DIGIT_FIVE
         );
     }
 

@@ -408,16 +408,19 @@ mod tests {
 
     #[test]
     fn test_digit_in_different_digit_family() {
+        // 0 arab indic digit family works
         assert!(Picture::parse("٠").is_ok());
     }
 
     #[test]
     fn test_digit_in_different_digit_family2() {
+        // 1 in arab indic digit family works
         assert!(Picture::parse("١").is_ok());
     }
 
     #[test]
     fn test_digits_not_in_same_digit_family_is_illegal() {
+        // here we mix arab indic digit family with ascii digits
         assert_eq!(Picture::parse("0٠"), Err(Error::InvalidPictureString));
     }
 
@@ -464,11 +467,22 @@ mod tests {
             "-1,222,333"
         );
     }
+
     #[test]
     fn test_format_digit_as_different_digit_family() {
+        // transliterate into arab indic digits
         assert_eq!(format_integer(15.into(), "١").unwrap(), "١٥");
     }
 
+    #[test]
+    fn test_format_digit_as_nko_digits() {
+        // transliterate into nko digits
+        // Nko, very unusually for digits, actually renders them the
+        // other way around, with more significant digits on the right rather
+        // than the left. So we think 15 is ߁߅ rather than ߅߁. The spec doesn't
+        // seem to take this into account however.
+        assert_eq!(format_integer(15.into(), "߀").unwrap(), "߁߅")
+    }
     // TODO:
     // - check that group separator isn't in the wrong character class
     // - is this allowed? #,?
